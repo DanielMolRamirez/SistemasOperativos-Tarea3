@@ -1,0 +1,41 @@
+#!/bin/bash
+
+output_file="monitoreo_recursos.txt"
+
+echo "Tiempo (s)    % Total de CPU libre    % Memoria libre    % Disco libre" > $output_file
+
+calcular_cpu_libre() {
+  # Usamos el comando 'top' para obtener el uso de CPU, luego extraemos el valor con 'grep' y 'awk'
+  cpu_usada=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | sed 's/,/./')
+  cpu_libre=$(echo "100 - $cpu_usada" | bc)
+  echo $cpu_libre
+}
+
+calcular_memoria_libre() {
+  # Usamos el comando 'free' para obtener la memoria libre y total
+  memoria_libre=$(free | grep Mem | awk '{print $4}')
+  memoria_total=$(free | grep Mem | awk '{print $2}')
+  memoria_libre_porcentaje=$(echo "scale=2; $memoria_libre / $memoria_total * 100" | bc)
+  echo $memoria_libre_porcentaje
+}
+
+calcular_disco_libre() {
+  # Usamos el comando 'df -h' para obtener el porcentaje de disco libre en "/"
+  disco_libre=$(df -h / | grep '/' | awk '{print $5}' | tr -d '%')
+  disco_libre=$(echo "100 - $disco_libre" | bc)
+  echo $disco_libre
+}
+
+
+for ((i = 60; i <= 300; i+=60)); do
+  cpu_libre=$(calcular_cpu_libre)
+  memoria_libre=$(calcular_memoria_libre)
+  disco_libre=$(calcular_disco_libre)
+  
+
+  echo "$i    $cpu_libre    $memoria_libre    $disco_libre" >> $output_file
+  
+  sleep 60
+done
+
+echo "Monitoreo finalizado. Los resultados están guardados en $output_file."
